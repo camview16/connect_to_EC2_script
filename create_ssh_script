@@ -1,0 +1,57 @@
+#!/bin/bash
+
+PWD1=$PWD
+
+read -p "Enter binary file name to create (example : connect_frontend_live, connect_backend_live) : " file_name
+touch $file_name
+
+echo "#!/bin/bash" >> $file_name
+
+read -p "Enter the AWS EC2 connection string (ssh -i XXX.pem YY@YY) : " conn_name
+
+count=0
+
+IFS=" " read -ra ADDR <<< $conn_name
+for i in "${ADDR[@]}"; do
+	if [ $count -eq 2 ]
+	then
+		pem_file=$i
+	elif [ $count -eq 3 ]
+	then
+		count1=0
+		IFS="@" read -ra ADDR <<< $i
+		for j in "${ADDR[@]}"; do
+			if [ $count1 -eq 0 ]
+			then
+				host_username=$j
+			elif [ $count1 -eq 1 ]
+			then
+				host_name=$j
+			fi
+        		count1=$((count1+1))
+		done
+	fi
+	count=$((count+1))
+done
+
+read -e -p "Change pem file location (mention absolute path) ? " -i $pem_file pem_file
+
+read -e -p "Change host user name ? " -i $host_username host_username
+
+read -e -p "Change host server name ? " -i $host_name host_name
+
+echo ssh -i ${pem_file} $host_username@$host_name >> $file_name
+
+sudo cp $file_name /usr/local/bin
+cd /usr/local/bin/
+sudo chown root:root $file_name || exit 1
+echo "Changed file user permissions"
+sudo chmod +x $file_name || exit 1
+echo "Changed file execution permissions"
+which $file_name
+
+cd $PWD1
+sudo rm $file_name
+
+
+
